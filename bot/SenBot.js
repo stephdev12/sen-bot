@@ -3,14 +3,14 @@
  * Copyright (c) 2024 𝙎𝙏𝙀𝙋𝙃𝘿𝙀𝙑
  */
 
-import makeWASocket,
+import makeWASocket from '@whiskeysockets/baileys';
+import {
     useMultiFileAuthState,
     DisconnectReason,
     fetchLatestBaileysVersion,
     jidDecode,
     makeCacheableSignalKeyStore,
-    delay,
-    makeInMemoryStore
+    delay
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
@@ -44,13 +44,6 @@ import presenceManager from '../lib/presenceManager.js';
 import statusManager from '../lib/statusManager.js';
 import antiDelete from '../lib/antiDelete.js';
 
-// Setup Store
-const store = makeInMemoryStore({ logger: pino().child({ level: 'silent', stream: 'store' }) });
-store.readFromFile('./session/baileys_store_multi.json');
-setInterval(() => {
-    store.writeToFile('./session/baileys_store_multi.json');
-}, 10_000);
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -63,7 +56,6 @@ export class SenBot {
         this.keepAliveInterval = null;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
-        this.store = store; // Bind store to bot instance
         
         // Bot metadata
         this.botName = configs.botName;
@@ -334,23 +326,16 @@ export class SenBot {
                 markOnlineOnConnect: true,
                 generateHighQualityLinkPreview: true,
                 syncFullHistory: false,
-                getMessage: async (key) => {
-                    let jid = jidNormalizedUser(key.remoteJid);
-                    let msg = await this.store.loadMessage(jid, key.id);
-                    return msg?.message || "";
-                },
                 msgRetryCounterCache,
                 defaultQueryTimeoutMs: 60000,
                 connectTimeoutMs: 60000,
                 keepAliveIntervalMs: 10000,
             });
             
-            this.store.bind(this.socket.ev); // Bind store to events
-            
             // Initialize Managers
             presenceManager.init(this.socket);
             statusManager.init(this.socket);
-            antiDelete.init(this.socket, this.store);
+            antiDelete.init(this.socket); // Plus besoin de store externe
 
             this.setupEventHandlers(saveCreds);
             
@@ -943,7 +928,7 @@ if (!userMessage.startsWith(currentPrefix)) return;
                     console.log(chalk.red('Bad Session File, Please Delete session and Scan Again'));
                     try {
                         fs.rmSync('./session', { recursive: true, force: true });
-                    } catch {} 
+                    } catch {}
                     process.exit(0);
                 }
             } else if (statusCode === DisconnectReason.connectionClosed) {
@@ -959,7 +944,7 @@ if (!userMessage.startsWith(currentPrefix)) return;
                 console.log(chalk.red('Device Logged Out, Please Delete session and Scan Again.'));
                 try {
                     fs.rmSync('./session', { recursive: true, force: true });
-                } catch {} 
+                } catch {}
                 process.exit(0);
             } else if (statusCode === DisconnectReason.restartRequired) {
                 console.log(chalk.yellow('Restart Required, Restarting...'));
@@ -971,7 +956,7 @@ if (!userMessage.startsWith(currentPrefix)) return;
                 console.log(chalk.red('Unauthorized. Session deleted.'));
                 try {
                     fs.rmSync('./session', { recursive: true, force: true });
-                } catch {} 
+                } catch {}
                 process.exit(0);
             } else if (shouldReconnect) {
                 console.log(chalk.yellow('Reconnecting...'));
