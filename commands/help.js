@@ -33,6 +33,13 @@ export async function helpCommand(sock, chatId, message, args) {
                 "setwelcome",
                 "setgoodbye",
                 "save", 
+                "respond",
+                "setrespond",
+                "autowrite",
+                "autorecord",
+                "autostatus",
+                "antidelete",
+                "update",
             ],
            "AI": [ 
                 "gpt4", 
@@ -45,7 +52,9 @@ export async function helpCommand(sock, chatId, message, args) {
                 "removebg",
                 "upscale",
                 "img2sketch",
-                "nanobanana"
+                "nanobanana",
+                "toimg",
+                "tovideo",
            ], 
            "Google": [ 
                 "gemini", 
