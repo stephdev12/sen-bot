@@ -210,6 +210,8 @@ export class SenBot {
             { name: 'vd', aliases: ['video'], file: '../commands/media.js', func: 'vdCommand' },
             { name: 'listmedia', aliases: ['medialist'], file: '../commands/media.js', func: 'listMediaCommand' },
             { name: 'delmedia', aliases: ['deletemedia'], file: '../commands/media.js', func: 'deleteMediaCommand' },
+            { name: 'toimg', aliases: [], file: '../commands/media.js', func: 'toimgCommand' },
+            { name: 'tovideo', aliases: [], file: '../commands/media.js', func: 'tovideoCommand' },
             { name: 'play', aliases: ['song', 'mp3'], file: '../commands/play.js', func: 'playCommand' },
 
 

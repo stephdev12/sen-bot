@@ -114,6 +114,115 @@
       "searchHeader": "RECHERCHE YOUTUBE",
       "audioCaption": "SEN MUSIC",
       "videoCaption": "*{title}*\n\nTaille: {size}\n> SEN VIDEO"
+    },
+    "setname": {
+      "usage": "> Veuillez entrer un nom\nExemple: .setname SuperBot",
+      "success": "*NOM DU BOT CHANGE*\n\n> Nouveau nom: {name}"
+    },
+    "setprefix": {
+      "usage": "> Veuillez entrer un préfixe\nExemple: .setprefix !",
+      "success": "*PREFIXE CHANGE*\n\n> Nouveau préfixe: {prefix}"
+    },
+    "setmenu": {
+      "usage": "> Veuillez répondre à une image avec la commande",
+      "uploading": "> *TELECHARGEMENT EN COURS*",
+      "success": "*IMAGE DU MENU CHANGEE*"
+    },
+    "setaudio": {
+      "usage": "> Veuillez répondre à un audio avec la commande",
+      "uploading": "> *TELECHARGEMENT EN COURS*",
+      "success": "*AUDIO DU MENU CHANGE*"
+    },
+    "setstyle": {
+      "usage": "> Style invalide. Choisissez entre 1, 2 ou 3\nExemple: .setstyle 2",
+      "success": "*STYLE DU MENU CHANGE*\n\n> Style: {style}"
+    },
+    "audio": {
+      "usage": "> Usage: .audio on ou .audio off",
+      "success": "*AUDIO DU MENU*\n\n> Status: {status}",
+      "enabled": "ACTIVE",
+      "disabled": "DESACTIVE"
+    },
+    "sticker": {
+      "noMedia": "> Répondez à une image, vidéo ou sticker"
+    },
+    "store": {
+      "usage": "> Répondez à un audio ou une vidéo",
+      "noName": "> Usage: .store <nom>\nExemple: .store mysong",
+      "success": "*MEDIA ENREGISTRE*\n\n> Nom: {name}\n> Type: {type}"
+    },
+    "ad": {
+      "usage": "> Usage: .ad <nom>\nExemple: .ad mysong",
+      "notFound": "> Audio introuvable: {name}"
+    },
+    "vd": {
+      "usage": "> Usage: .vd <nom> [-c]\nExemple: .vd myvideo",
+      "notFound": "> Vidéo introuvable: {name}"
+    },
+    "listMedia": {
+      "empty": "> Aucun média enregistré",
+      "header": "*MES MEDIAS ENREGISTRES*"
+    },
+    "deleteMedia": {
+      "usage": "> Usage: .delmedia <nom>",
+      "success": "> Média supprimé: {name}",
+      "notFound": "> Média introuvable: {name}"
+    },
+    "toimg": {
+      "noSticker": "> Veuillez répondre à un sticker non-animé.",
+      "animated": "> Utilisez .tovideo pour les stickers animés.",
+      "success": "> *TOIMG DONE*",
+      "error": "> Erreur lors de la conversion"
+    },
+    "tovideo": {
+      "noSticker": "> Veuillez répondre à un sticker animé.",
+      "success": "> *TOVIDEO DONE*",
+      "error": "> Erreur lors de la conversion"
+    },
+    "autowrite": {
+      "usage": "> Usage: .autowrite on ou .autowrite off",
+      "status": "*AUTO WRITE*\n\nStatut: {status}\n\nUsage: .autowrite on/off",
+      "on": "ACTIVÉ",
+      "off": "DÉSACTIVÉ",
+      "enabled": "> Simulation d'écriture activée",
+      "disabled": "> Simulation d'écriture désactivée",
+      "invalidOption": "> Option invalide. Utilisez on ou off",
+      "updated": "> Auto write {status}"
+    },
+    "autorecord": {
+      "usage": "> Usage: .autorecord on ou .autorecord off",
+      "status": "*AUTO RECORD*\n\nStatut: {status}\n\nUsage: .autorecord on/off",
+      "on": "ACTIVÉ",
+      "off": "DÉSACTIVÉ",
+      "enabled": "> Simulation d'enregistrement activée",
+      "disabled": "> Simulation d'enregistrement désactivée",
+      "invalidOption": "> Option invalide. Utilisez on ou off",
+      "updated": "> Auto record {status}"
+    },
+    "autostatus": {
+      "usage": "> Usage: .autostatus on, .autostatus off, ou .autostatus react [emoji]",
+      "status": "*AUTO STATUS*\n\nStatut: {status}\n\nUsage: .autostatus on/off/react",
+      "on": "ACTIVÉ",
+      "off": "DÉSACTIVÉ",
+      "enabled": "> Lecture auto des statuts activée",
+      "disabled": "> Lecture auto des statuts désactivée",
+      "invalidOption": "> Option invalide.",
+      "updated": "> Auto status {status}",
+      "reactEnabled": "> Réaction auto aux statuts activée: {emoji}",
+      "reactDisabled": "> Réaction auto aux statuts désactivée"
+    },
+    "antidelete": {
+      "usage": "> Usage: .antidelete on ou .antidelete off",
+      "enabled": "> Anti-delete activé (Message privé)",
+      "disabled": "> Anti-delete désactivé",
+      "deletedMessage": "🗑️ *MESSAGE SUPPRIMÉ DÉTECTÉ*\n\n> *Auteur :* @{sender}\n> *Date :* {time}\n\n*Contenu :*\n{content}"
+    },
+    "update": {
+      "checking": "> Recherche de mises à jour...",
+      "uptodate": "> Le bot est déjà à jour.",
+      "updating": "> Mise à jour disponible ! Téléchargement...",
+      "success": "> Mise à jour réussie. Redémarrage...",
+      "failed": "> Échec de la mise à jour."
     }
   },
   "mode": {
@@ -219,102 +328,15 @@
     "footer": "SEN DOWNLOADER",
     "downloadButton": "📥 DOWNLOAD APK"
   },
-  "setname": {
-    "usage": "> Veuillez entrer un nom\nExemple: .setname SuperBot",
-    "success": "*NOM DU BOT CHANGE*\n\n> Nouveau nom: {name}"
-  },
-  "setprefix": {
-    "usage": "> Veuillez entrer un préfixe\nExemple: .setprefix !",
-    "success": "*PREFIXE CHANGE*\n\n> Nouveau préfixe: {prefix}"
-  },
-  "setmenu": {
-    "usage": "> Veuillez répondre à une image avec la commande",
-    "uploading": "> *TELECHARGEMENT EN COURS*",
-    "success": "*IMAGE DU MENU CHANGEE*"
-  },
-  "setaudio": {
-    "usage": "> Veuillez répondre à un audio avec la commande",
-    "uploading": "> *TELECHARGEMENT EN COURS*",
-    "success": "*AUDIO DU MENU CHANGE*"
-  },
-  "setstyle": {
-    "usage": "> Style invalide. Choisissez entre 1, 2 ou 3\nExemple: .setstyle 2",
-    "success": "*STYLE DU MENU CHANGE*\n\n> Style: {style}"
-  },
-  "audio": {
-    "usage": "> Usage: .audio on ou .audio off",
-    "success": "*AUDIO DU MENU*\n\n> Status: {status}",
-    "enabled": "ACTIVE",
-    "disabled": "DESACTIVE"
-  },
   "glink": {
     "success": "*LIEN DU GROUPE*\n\n{link}"
-  },
-  "sticker": {
-    "noMedia": "> Répondez à une image, vidéo ou sticker"
-  },
-  "store": {
-    "usage": "> Répondez à un audio ou une vidéo",
-    "noName": "> Usage: .store <nom>\nExemple: .store mysong",
-    "success": "*MEDIA ENREGISTRE*\n\n> Nom: {name}\n> Type: {type}"
-  },
-  "ad": {
-    "usage": "> Usage: .ad <nom>\nExemple: .ad mysong",
-    "notFound": "> Audio introuvable: {name}"
-  },
-  "vd": {
-    "usage": "> Usage: .vd <nom> [-c]\nExemple: .vd myvideo",
-    "notFound": "> Vidéo introuvable: {name}"
-  },
-  "listMedia": {
-    "empty": "> Aucun média enregistré",
-    "header": "*MES MEDIAS ENREGISTRES*"
-  },
-  "deleteMedia": {
-    "usage": "> Usage: .delmedia <nom>",
-    "success": "> Média supprimé: {name}",
-    "notFound": "> Média introuvable: {name}"
   },
   "getpp": {
     "success": "> *PHOTO DE PROFIL*",
     "notFound": "> Aucune photo de profil trouvée ou compte privé"
   },
-      "save": {
-        "usage": "> Répondez à un statut (image ou vidéo)",
-        "unsupported": "> Type de média non supporté",
-        "success": "*STATUT ENREGISTRE*"
-      },
-      "autowrite": {
-        "usage": "> Usage: .autowrite on ou .autowrite off",
-        "enabled": "> Simulation d'écriture activée",
-        "disabled": "> Simulation d'écriture désactivée"
-      },
-      "autorecord": {
-        "usage": "> Usage: .autorecord on ou .autorecord off",
-        "enabled": "> Simulation d'enregistrement activée",
-        "disabled": "> Simulation d'enregistrement désactivée"
-      },
-      "autostatus": {
-        "usage": "> Usage: .autostatus on, .autostatus off, ou .autostatus react [emoji]",
-        "enabled": "> Lecture auto des statuts activée",
-        "disabled": "> Lecture auto des statuts désactivée",
-        "reactEnabled": "> Réaction auto aux statuts activée: {emoji}",
-        "reactDisabled": "> Réaction auto aux statuts désactivée"
-      },
-      "antidelete": {
-        "usage": "> Usage: .antidelete on ou .antidelete off",
-        "enabled": "> Anti-delete activé (Message privé)",
-        "disabled": "> Anti-delete désactivé",
-        "deletedMessage": "🗑️ *MESSAGE SUPPRIMÉ DÉTECTÉ*\n\n> *Auteur :* @{sender}\n> *Date :* {time}\n\n*Contenu :*\n{content}"
-      },
-      "update": {
-        "checking": "> Recherche de mises à jour...",
-        "uptodate": "> Le bot est déjà à jour.",
-        "updating": "> Mise à jour disponible ! Téléchargement...",
-        "success": "> Mise à jour réussie. Redémarrage...",
-        "failed": "> Échec de la mise à jour."
-      },
-      "quiz": {    "ui": {
+  "quiz": {
+    "ui": {
       "title": "🧠 SEN QUIZZ",
       "select": "Choisissez une catégorie pour commencer !",
       "lobby": "*SEN_QUIZZ LOBBY*\n\n> *Catégorie :* {category}\n\nÉcrivez *'join'* pour rejoindre la partie !\nLa partie commence dans 30 secondes.",
@@ -813,7 +835,7 @@
           {
             "q": "Quelle chaîne de montagnes sépare l'Europe de l'Asie ?",
             "options": [
-              "Alpes",
+              " Alpes",
               "Himalaya",
               "Oural",
               "Andes"

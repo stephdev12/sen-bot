@@ -114,6 +114,124 @@
       "searchHeader": "YOUTUBE SEARCH",
       "audioCaption": "SEN MUSIC",
       "videoCaption": "*{title}*\n\nSize: {size}\n> SEN VIDEO"
+    },
+    "setname": {
+      "usage": "> Please enter a name\nExample: .setname SuperBot",
+      "success": "*BOT NAME CHANGED*\n\n> New name: {name}"
+    },
+    "setprefix": {
+      "usage": "> Please enter a prefix\nExample: .setprefix !",
+      "success": "*PREFIX CHANGED*\n\n> New prefix: {prefix}"
+    },
+    "setmenu": {
+      "usage": "> Please reply to an image with the command",
+      "uploading": "> *UPLOADING*",
+      "success": "*MENU IMAGE CHANGED*"
+    },
+    "setaudio": {
+      "usage": "> Please reply to an audio with the command",
+      "uploading": "> *UPLOADING*",
+      "success": "*MENU AUDIO CHANGED*"
+    },
+    "setstyle": {
+      "usage": "> Invalid style. Choose 1, 2 or 3\nExample: .setstyle 2",
+      "success": "*MENU STYLE CHANGED*\n\n> Style: {style}"
+    },
+    "audio": {
+      "usage": "> Usage: .audio on or .audio off",
+      "success": "*MENU AUDIO*\n\n> Status: {status}",
+      "enabled": "ENABLED",
+      "disabled": "DISABLED"
+    },
+    "sticker": {
+      "noMedia": "> Reply to an image, video or sticker"
+    },
+    "store": {
+      "usage": "> Reply to an audio or video",
+      "noName": "> Usage: .store <name>\nExample: .store mysong",
+      "success": "*MEDIA STORED*\n\n> Name: {name}\n> Type: {type}"
+    },
+    "ad": {
+      "usage": "> Usage: .ad <name>\nExample: .ad mysong",
+      "notFound": "> Audio not found: {name}"
+    },
+    "vd": {
+      "usage": "> Usage: .vd <name> [-c]\nExample: .vd myvideo",
+      "notFound": "> Video not found: {name}"
+    },
+    "listMedia": {
+      "empty": "> No saved media",
+      "header": "*MY SAVED MEDIA*"
+    },
+    "deleteMedia": {
+      "usage": "> Usage: .delmedia <name>",
+      "success": "> Media deleted: {name}",
+      "notFound": "> Media not found: {name}"
+    },
+    "getpp": {
+      "success": "> *PROFILE PICTURE*",
+      "notFound": "> No profile picture found or private account"
+    },
+    "save": {
+      "usage": "> Reply to a status (image or video)",
+      "unsupported": "> Unsupported media type",
+      "success": "*STATUS SAVED*"
+    },
+    "toimg": {
+      "noSticker": "> Please reply to a non-animated sticker.",
+      "animated": "> Use .tovideo for animated stickers.",
+      "success": "> *TOIMG DONE*",
+      "error": "> Conversion error"
+    },
+    "tovideo": {
+      "noSticker": "> Please reply to an animated sticker.",
+      "success": "> *TOVIDEO DONE*",
+      "error": "> Conversion error"
+    },
+    "autowrite": {
+      "usage": "> Usage: .autowrite on or .autowrite off",
+      "status": "*AUTO WRITE*\n\nStatus: {status}\n\nUsage: .autowrite on/off",
+      "on": "ENABLED",
+      "off": "DISABLED",
+      "enabled": "> Auto-typing enabled",
+      "disabled": "> Auto-typing disabled",
+      "invalidOption": "> Invalid option. Use on or off",
+      "updated": "> Auto write {status}"
+    },
+    "autorecord": {
+      "usage": "> Usage: .autorecord on or .autorecord off",
+      "status": "*AUTO RECORD*\n\nStatus: {status}\n\nUsage: .autorecord on/off",
+      "on": "ENABLED",
+      "off": "DISABLED",
+      "enabled": "> Auto-recording enabled",
+      "disabled": "> Auto-recording disabled",
+      "invalidOption": "> Invalid option. Use on or off",
+      "updated": "> Auto record {status}"
+    },
+    "autostatus": {
+      "usage": "> Usage: .autostatus on, .autostatus off, or .autostatus react [emoji]",
+      "status": "*AUTO STATUS*\n\nStatus: {status}\n\nUsage: .autostatus on/off/react",
+      "on": "ENABLED",
+      "off": "DISABLED",
+      "enabled": "> Auto status view enabled",
+      "disabled": "> Auto status view disabled",
+      "invalidOption": "> Invalid option.",
+      "updated": "> Auto status {status}",
+      "reactEnabled": "> Auto status react enabled: {emoji}",
+      "reactDisabled": "> Auto status react disabled"
+    },
+    "antidelete": {
+      "usage": "> Usage: .antidelete on or .antidelete off",
+      "enabled": "> Anti-delete enabled (Private message)",
+      "disabled": "> Anti-delete disabled",
+      "deletedMessage": "🗑️ *DELETED MESSAGE DETECTED*\n\n> *Author :* @{sender}\n> *Time :* {time}\n\n*Content :*\n{content}"
+    },
+    "update": {
+      "checking": "> Checking for updates...",
+      "uptodate": "> Bot is already up to date.",
+      "updating": "> Update available! Downloading...",
+      "success": "> Update successful. Restarting...",
+      "failed": "> Update failed."
     }
   },
   "mode": {
@@ -219,102 +337,15 @@
     "footer": "SEN DOWNLOADER",
     "downloadButton": "📥 DOWNLOAD APK"
   },
-  "setname": {
-    "usage": "> Please enter a name\nExample: .setname SuperBot",
-    "success": "*BOT NAME CHANGED*\n\n> New name: {name}"
-  },
-  "setprefix": {
-    "usage": "> Please enter a prefix\nExample: .setprefix !",
-    "success": "*PREFIX CHANGED*\n\n> New prefix: {prefix}"
-  },
-  "setmenu": {
-    "usage": "> Please reply to an image with the command",
-    "uploading": "> *UPLOADING*",
-    "success": "*MENU IMAGE CHANGED*"
-  },
-  "setaudio": {
-    "usage": "> Please reply to an audio with the command",
-    "uploading": "> *UPLOADING*",
-    "success": "*MENU AUDIO CHANGED*"
-  },
-  "setstyle": {
-    "usage": "> Invalid style. Choose 1, 2 or 3\nExample: .setstyle 2",
-    "success": "*MENU STYLE CHANGED*\n\n> Style: {style}"
-  },
-  "audio": {
-    "usage": "> Usage: .audio on or .audio off",
-    "success": "*MENU AUDIO*\n\n> Status: {status}",
-    "enabled": "ENABLED",
-    "disabled": "DISABLED"
-  },
   "glink": {
     "success": "*GROUP LINK*\n\n{link}"
-  },
-  "sticker": {
-    "noMedia": "> Reply to an image, video or sticker"
-  },
-  "store": {
-    "usage": "> Reply to an audio or video",
-    "noName": "> Usage: .store <name>\nExample: .store mysong",
-    "success": "*MEDIA STORED*\n\n> Name: {name}\n> Type: {type}"
-  },
-  "ad": {
-    "usage": "> Usage: .ad <name>\nExample: .ad mysong",
-    "notFound": "> Audio not found: {name}"
-  },
-  "vd": {
-    "usage": "> Usage: .vd <name> [-c]\nExample: .vd myvideo",
-    "notFound": "> Video not found: {name}"
-  },
-  "listMedia": {
-    "empty": "> No saved media",
-    "header": "*MY SAVED MEDIA*"
-  },
-  "deleteMedia": {
-    "usage": "> Usage: .delmedia <name>",
-    "success": "> Media deleted: {name}",
-    "notFound": "> Media not found: {name}"
   },
   "getpp": {
     "success": "> *PROFILE PICTURE*",
     "notFound": "> No profile picture found or private account"
   },
-      "save": {
-        "usage": "> Reply to a status (image or video)",
-        "unsupported": "> Unsupported media type",
-        "success": "*STATUS SAVED*"
-      },
-      "autowrite": {
-        "usage": "> Usage: .autowrite on or .autowrite off",
-        "enabled": "> Auto-typing enabled",
-        "disabled": "> Auto-typing disabled"
-      },
-      "autorecord": {
-        "usage": "> Usage: .autorecord on or .autorecord off",
-        "enabled": "> Auto-recording enabled",
-        "disabled": "> Auto-recording disabled"
-      },
-      "autostatus": {
-        "usage": "> Usage: .autostatus on, .autostatus off, or .autostatus react [emoji]",
-        "enabled": "> Auto status view enabled",
-        "disabled": "> Auto status view disabled",
-        "reactEnabled": "> Auto status react enabled: {emoji}",
-        "reactDisabled": "> Auto status react disabled"
-      },
-      "antidelete": {
-        "usage": "> Usage: .antidelete on or .antidelete off",
-        "enabled": "> Anti-delete enabled (Private message)",
-        "disabled": "> Anti-delete disabled",
-        "deletedMessage": "🗑️ *DELETED MESSAGE DETECTED*\n\n> *Author :* @{sender}\n> *Time :* {time}\n\n*Content :*\n{content}"
-      },
-      "update": {
-        "checking": "> Checking for updates...",
-        "uptodate": "> Bot is already up to date.",
-        "updating": "> Update available! Downloading...",
-        "success": "> Update successful. Restarting...",
-        "failed": "> Update failed."
-      },
-      "quiz": {    "ui": {
+  "quiz": {
+    "ui": {
       "title": "🧠 SEN QUIZ",
       "select": "Choose a category to start!",
       "lobby": "*SEN_QUIZ LOBBY*\n\n> *Category :* {category}\n\nType *'join'* to join the game!\nThe game starts in 30 seconds.",

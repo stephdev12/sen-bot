@@ -1,316 +1,3 @@
-const fs = require('fs');
-const path = require('path');
-const { tmpdir } = require('os');
-const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
-const { writeFile } = require('fs/promises');
-
-const messageStore = new Map();
-const CONFIG_PATH = path.join(__dirname, '../data/antidelete.json');
-const TEMP_MEDIA_DIR = path.join(__dirname, '../tmp');
-
-// Ensure tmp dir exists
-if (!fs.existsSync(TEMP_MEDIA_DIR)) {
-    fs.mkdirSync(TEMP_MEDIA_DIR, { recursive: true });
-}
-
-// Function to get folder size in MB
-const getFolderSizeInMB = (folderPath) => {
-    try {
-        const files = fs.readdirSync(folderPath);
-        let totalSize = 0;
-
-        for (const file of files) {
-            const filePath = path.join(folderPath, file);
-            if (fs.statSync(filePath).isFile()) {
-                totalSize += fs.statSync(filePath).size;
-            }
-        }
-
-        return totalSize / (1024 * 1024); // Convert bytes to MB
-    } catch (err) {
-        console.error('Error getting folder size:', err);
-        return 0;
-    }
-};
-
-// Function to clean temp folder if size exceeds 10MB
-const cleanTempFolderIfLarge = () => {
-    try {
-        const sizeMB = getFolderSizeInMB(TEMP_MEDIA_DIR);
-        
-        if (sizeMB > 200) {
-            const files = fs.readdirSync(TEMP_MEDIA_DIR);
-            for (const file of files) {
-                const filePath = path.join(TEMP_MEDIA_DIR, file);
-                fs.unlinkSync(filePath);
-            }
-        }
-    } catch (err) {
-        console.error('Temp cleanup error:', err);
-    }
-};
-
-// Start periodic cleanup check every 1 minute
-setInterval(cleanTempFolderIfLarge, 60 * 1000);
-
-// Load config
-function loadAntideleteConfig() {
-    try {
-        if (!fs.existsSync(CONFIG_PATH)) return { enabled: false };
-        return JSON.parse(fs.readFileSync(CONFIG_PATH));
-    } catch {
-        return { enabled: false };
-    }
-}
-
-// Save config
-function saveAntideleteConfig(config) {
-    try {
-        fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
-    } catch (err) {
-        console.error('Config save error:', err);
-    }
-}
-
-const isOwnerOrSudo = require('../lib/isOwner');
-
-// Command Handler
-async function handleAntideleteCommand(sock, chatId, message, match) {
-    const senderId = message.key.participant || message.key.remoteJid;
-    const isOwner = await isOwnerOrSudo(senderId, sock, chatId);
-    
-    if (!message.key.fromMe && !isOwner) {
-        return sock.sendMessage(chatId, { text: '*Only the bot owner can use this command.*' }, { quoted: message });
-    }
-
-    const config = loadAntideleteConfig();
-
-    if (!match) {
-        return sock.sendMessage(chatId, {
-            text: `*ANTIDELETE SETUP*\n\nCurrent Status: ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n\n*.antidelete on* - Enable\n*.antidelete off* - Disable`
-        }, {quoted: message});
-    }
-
-    if (match === 'on') {
-        config.enabled = true;
-    } else if (match === 'off') {
-        config.enabled = false;
-    } else {
-        return sock.sendMessage(chatId, { text: '*Invalid command. Use .antidelete to see usage.*' }, {quoted:message});
-    }
-
-    saveAntideleteConfig(config);
-    return sock.sendMessage(chatId, { text: `*Antidelete ${match === 'on' ? 'enabled' : 'disabled'}*` }, {quoted:message});
-}
-
-// Store incoming messages (also handles anti-view-once by forwarding immediately)
-async function storeMessage(sock, message) {
-    try {
-        const config = loadAntideleteConfig();
-        if (!config.enabled) return; // Don't store if antidelete is disabled
-
-        if (!message.key?.id) return;
-
-        const messageId = message.key.id;
-        let content = '';
-        let mediaType = '';
-        let mediaPath = '';
-        let isViewOnce = false;
-
-        const sender = message.key.participant || message.key.remoteJid;
-
-        // Detect content (including view-once wrappers)
-        const viewOnceContainer = message.message?.viewOnceMessageV2?.message || message.message?.viewOnceMessage?.message;
-        if (viewOnceContainer) {
-            // unwrap view-once content
-            if (viewOnceContainer.imageMessage) {
-                mediaType = 'image';
-                content = viewOnceContainer.imageMessage.caption || '';
-                const buffer = await downloadContentFromMessage(viewOnceContainer.imageMessage, 'image');
-                mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.jpg`);
-                await writeFile(mediaPath, buffer);
-                isViewOnce = true;
-            } else if (viewOnceContainer.videoMessage) {
-                mediaType = 'video';
-                content = viewOnceContainer.videoMessage.caption || '';
-                const buffer = await downloadContentFromMessage(viewOnceContainer.videoMessage, 'video');
-                mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.mp4`);
-                await writeFile(mediaPath, buffer);
-                isViewOnce = true;
-            }
-        } else if (message.message?.conversation) {
-            content = message.message.conversation;
-        } else if (message.message?.extendedTextMessage?.text) {
-            content = message.message.extendedTextMessage.text;
-        } else if (message.message?.imageMessage) {
-            mediaType = 'image';
-            content = message.message.imageMessage.caption || '';
-            const buffer = await downloadContentFromMessage(message.message.imageMessage, 'image');
-            mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.jpg`);
-            await writeFile(mediaPath, buffer);
-        } else if (message.message?.stickerMessage) {
-            mediaType = 'sticker';
-            const buffer = await downloadContentFromMessage(message.message.stickerMessage, 'sticker');
-            mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.webp`);
-            await writeFile(mediaPath, buffer);
-        } else if (message.message?.videoMessage) {
-            mediaType = 'video';
-            content = message.message.videoMessage.caption || '';
-            const buffer = await downloadContentFromMessage(message.message.videoMessage, 'video');
-            mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.mp4`);
-            await writeFile(mediaPath, buffer);
-        } else if (message.message?.audioMessage) {
-            mediaType = 'audio';
-            const mime = message.message.audioMessage.mimetype || '';
-            const ext = mime.includes('mpeg') ? 'mp3' : (mime.includes('ogg') ? 'ogg' : 'mp3');
-            const buffer = await downloadContentFromMessage(message.message.audioMessage, 'audio');
-            mediaPath = path.join(TEMP_MEDIA_DIR, `${messageId}.${ext}`);
-            await writeFile(mediaPath, buffer);
-        }
-
-        messageStore.set(messageId, {
-            content,
-            mediaType,
-            mediaPath,
-            sender,
-            group: message.key.remoteJid.endsWith('@g.us') ? message.key.remoteJid : null,
-            timestamp: new Date().toISOString()
-        });
-
-        // Anti-ViewOnce: forward immediately to owner if captured
-        if (isViewOnce && mediaType && fs.existsSync(mediaPath)) {
-            try {
-                const ownerNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-                const senderName = sender.split('@')[0];
-                const mediaOptions = {
-                    caption: `*Anti-ViewOnce ${mediaType}*
-From: @${senderName}`,
-                    mentions: [sender]
-                };
-                if (mediaType === 'image') {
-                    await sock.sendMessage(ownerNumber, { image: { url: mediaPath }, ...mediaOptions });
-                } else if (mediaType === 'video') {
-                    await sock.sendMessage(ownerNumber, { video: { url: mediaPath }, ...mediaOptions });
-                }
-                // Cleanup immediately for view-once forward
-                try { fs.unlinkSync(mediaPath); } catch {}
-            } catch (e) {
-                // ignore
-            }
-        }
-
-    } catch (err) {
-        console.error('storeMessage error:', err);
-    }
-}
-
-// Handle message deletion
-async function handleMessageRevocation(sock, revocationMessage) {
-    try {
-        const config = loadAntideleteConfig();
-        if (!config.enabled) return;
-
-        const messageId = revocationMessage.message.protocolMessage.key.id;
-        const deletedBy = revocationMessage.participant || revocationMessage.key.participant || revocationMessage.key.remoteJid;
-        const ownerNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-
-        if (deletedBy.includes(sock.user.id) || deletedBy === ownerNumber) return;
-
-        const original = messageStore.get(messageId);
-        if (!original) return;
-
-        const sender = original.sender;
-        const senderName = sender.split('@')[0];
-        const groupName = original.group ? (await sock.groupMetadata(original.group)).subject : '';
-
-        const time = new Date().toLocaleString('en-US', {
-            timeZone: 'Asia/Kolkata',
-            hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit',
-            day: '2-digit', month: '2-digit', year: 'numeric'
-        });
-
-        let text = `*🔰 ANTIDELETE REPORT 🔰*\n\n` +
-            `*🗑️ Deleted By:* @${deletedBy.split('@')[0]}\n` +
-            `*👤 Sender:* @${senderName}\n` +
-            `*📱 Number:* ${sender}\n` +
-            `*🕒 Time:* ${time}\n`;
-
-        if (groupName) text += `*👥 Group:* ${groupName}\n`;
-
-        if (original.content) {
-            text += `\n*💬 Deleted Message:*\n${original.content}`;
-        }
-
-        await sock.sendMessage(ownerNumber, {
-            text,
-            mentions: [deletedBy, sender]
-        });
-
-        // Media sending
-        if (original.mediaType && fs.existsSync(original.mediaPath)) {
-            const mediaOptions = {
-                caption: `*Deleted ${original.mediaType}*\nFrom: @${senderName}`,
-                mentions: [sender]
-            };
-
-            try {
-                switch (original.mediaType) {
-                    case 'image':
-                        await sock.sendMessage(ownerNumber, {
-                            image: { url: original.mediaPath },
-                            ...mediaOptions
-                        });
-                        break;
-                    case 'sticker':
-                        await sock.sendMessage(ownerNumber, {
-                            sticker: { url: original.mediaPath },
-                            ...mediaOptions
-                        });
-                        break;
-                    case 'video':
-                        await sock.sendMessage(ownerNumber, {
-                            video: { url: original.mediaPath },
-                            ...mediaOptions
-                        });
-                        break;
-                    case 'audio':
-                        await sock.sendMessage(ownerNumber, {
-                            audio: { url: original.mediaPath },
-                            mimetype: 'audio/mpeg',
-                            ptt: false,
-                            ...mediaOptions
-                        });
-                        break;
-                }
-            } catch (err) {
-                await sock.sendMessage(ownerNumber, {
-                    text: `⚠️ Error sending media: ${err.message}`
-                });
-            }
-
-            // Cleanup
-            try {
-                fs.unlinkSync(original.mediaPath);
-            } catch (err) {
-                console.error('Media cleanup error:', err);
-            }
-        }
-
-        messageStore.delete(messageId);
-
-    } catch (err) {
-        console.error('handleMessageRevocation error:', err);
-    }
-}
-
-module.exports = {
-    handleAntideleteCommand,
-    handleMessageRevocation,
-    storeMessage
-};
-
-
-
 /**
  * Knight Bot - A WhatsApp Bot
  * Copyright (c) 2024 Professor
@@ -322,627 +9,104 @@ module.exports = {
  * - Baileys Library by @adiwajshing
  * - Pair Code implementation inspired by TechGod143 & DGXEON
  */
-require('./settings')
-const { Boom } = require('@hapi/boom')
-const fs = require('fs')
-const chalk = require('chalk')
-const FileType = require('file-type')
-const path = require('path')
-const axios = require('axios')
-const { handleMessages, handleGroupParticipantUpdate, handleStatus } = require('./main');
-const PhoneNumber = require('awesome-phonenumber')
-const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require('./lib/exif')
-const { smsg, isUrl, generateMessageTag, getBuffer, getSizeMedia, fetch, await, sleep, reSize } = require('./lib/myfunc')
-const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    DisconnectReason,
-    fetchLatestBaileysVersion,
-    generateForwardMessageContent,
-    prepareWAMessageMedia,
-    generateWAMessageFromContent,
-    generateMessageID,
-    downloadContentFromMessage,
-    jidDecode,
-    proto,
-    jidNormalizedUser,
-    makeCacheableSignalKeyStore,
-    delay
-} = require("@whiskeysockets/baileys")
-const NodeCache = require("node-cache")
-// Using a lightweight persisted store instead of makeInMemoryStore (compat across versions)
-const pino = require("pino")
-const readline = require("readline")
-const { parsePhoneNumber } = require("libphonenumber-js")
-const { PHONENUMBER_MCC } = require('@whiskeysockets/baileys/lib/Utils/generics')
-const { rmSync, existsSync } = require('fs')
-const { join } = require('path')
+let axios = require('axios')
+let BodyForm = require('form-data')
+let { fromBuffer } = require('file-type')
+let fetch = require('node-fetch')
+let fs = require('fs')
+let cheerio = require('cheerio')
 
-// Import lightweight store
-const store = require('./lib/lightweight_store')
 
-// Initialize store
-store.readFromFile()
-const settings = require('./settings')
-setInterval(() => store.writeToFile(), settings.storeWriteInterval || 10000)
 
-// Memory optimization - Force garbage collection if available
-setInterval(() => {
-    if (global.gc) {
-        global.gc()
-        console.log('🧹 Garbage collection completed')
-    }
-}, 60_000) // every 1 minute
-
-// Memory monitoring - Restart if RAM gets too high
-setInterval(() => {
-    const used = process.memoryUsage().rss / 1024 / 1024
-    if (used > 400) {
-        console.log('⚠️ RAM too high (>400MB), restarting bot...')
-        process.exit(1) // Panel will auto-restart
-    }
-}, 30_000) // check every 30 seconds
-
-let phoneNumber = "911234567890"
-let owner = JSON.parse(fs.readFileSync('./data/owner.json'))
-
-global.botname = "KNIGHT BOT"
-global.themeemoji = "•"
-const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code")
-const useMobile = process.argv.includes("--mobile")
-
-// Only create readline interface if we're in an interactive environment
-const rl = process.stdin.isTTY ? readline.createInterface({ input: process.stdin, output: process.stdout }) : null
-const question = (text) => {
-    if (rl) {
-        return new Promise((resolve) => rl.question(text, resolve))
-    } else {
-        // In non-interactive environment, use ownerNumber from settings
-        return Promise.resolve(settings.ownerNumber || phoneNumber)
-    }
+function TelegraPh (Path) {
+	return new Promise (async (resolve, reject) => {
+		if (!fs.existsSync(Path)) return reject(new Error("File not Found"))
+		try {
+			const form = new BodyForm();
+			form.append("file", fs.createReadStream(Path))
+			const data = await  axios({
+				url: "https://telegra.ph/upload",
+				method: "POST",
+				headers: {
+					...form.getHeaders()
+				},
+				data: form
+			})
+			return resolve("https://telegra.ph" + data.data[0].src)
+		} catch (err) {
+			return reject(new Error(String(err)))
+		}
+	})
 }
 
+async function UploadFileUgu (input) {
+	return new Promise (async (resolve, reject) => {
+			const form = new BodyForm();
+			form.append("files[]", fs.createReadStream(input))
+			await axios({
+				url: "https://uguu.se/upload.php",
+				method: "POST",
+				headers: {
+					"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36",
+					...form.getHeaders()
+				},
+				data: form
+			}).then((data) => {
+				resolve(data.data.files[0])
+			}).catch((err) => reject(err))
+	})
+}
 
-async function startXeonBotInc() {
-    try {
-        let { version, isLatest } = await fetchLatestBaileysVersion()
-        const { state, saveCreds } = await useMultiFileAuthState(`./session`)
-        const msgRetryCounterCache = new NodeCache()
+function webp2mp4File(path) {
+	return new Promise((resolve, reject) => {
+		 const form = new BodyForm()
+		 form.append('new-image-url', '')
+		 form.append('new-image', fs.createReadStream(path))
+		 axios({
+			  method: 'post',
+			  url: 'https://s6.ezgif.com/webp-to-mp4',
+			  data: form,
+			  headers: {
+				   'Content-Type': `multipart/form-data; boundary=${form._boundary}`
+			  }
+		 }).then(({ data }) => {
+			  const bodyFormThen = new BodyForm()
+			  const $ = cheerio.load(data)
+			  const file = $('input[name="file"]').attr('value')
+			  bodyFormThen.append('file', file)
+			  bodyFormThen.append('convert', "Convert WebP to MP4!")
+			  axios({
+				   method: 'post',
+				   url: 'https://ezgif.com/webp-to-mp4/' + file,
+				   data: bodyFormThen,
+				   headers: {
+						'Content-Type': `multipart/form-data; boundary=${bodyFormThen._boundary}`
+				   }
+			  }).then(({ data }) => {
+				   const $ = cheerio.load(data)
+				   const result = 'https:' + $('div#output > p.outfile > video > source').attr('src')
+				   resolve({
+						status: true,
+						message: "Created By MRHRTZ",
+						result: result
+				   })
+			  }).catch(reject)
+		 }).catch(reject)
+	})
+}
 
-        const XeonBotInc = makeWASocket({
-            version,
-            logger: pino({ level: 'silent' }),
-            printQRInTerminal: !pairingCode,
-            browser: ["Ubuntu", "Chrome", "20.0.04"],
-            auth: {
-                creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
-            },
-            markOnlineOnConnect: true,
-            generateHighQualityLinkPreview: true,
-            syncFullHistory: false,
-            getMessage: async (key) => {
-                let jid = jidNormalizedUser(key.remoteJid)
-                let msg = await store.loadMessage(jid, key.id)
-                return msg?.message || ""
-            },
-            msgRetryCounterCache,
-            defaultQueryTimeoutMs: 60000,
-            connectTimeoutMs: 60000,
-            keepAliveIntervalMs: 10000,
+async function floNime(medianya, options = {}) {
+const { ext } = await fromBuffer(medianya) || options.ext
+        var form = new BodyForm()
+        form.append('file', medianya, 'tmp.'+ext)
+        let jsonnya = await fetch('https://flonime.my.id/upload', {
+                method: 'POST',
+                body: form
         })
-
-        // Save credentials when they update
-        XeonBotInc.ev.on('creds.update', saveCreds)
-
-    store.bind(XeonBotInc.ev)
-
-    // Message handling
-    XeonBotInc.ev.on('messages.upsert', async chatUpdate => {
-        try {
-            const mek = chatUpdate.messages[0]
-            if (!mek.message) return
-            mek.message = (Object.keys(mek.message)[0] === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
-            if (mek.key && mek.key.remoteJid === 'status@broadcast') {
-                await handleStatus(XeonBotInc, chatUpdate);
-                return;
-            }
-            // In private mode, only block non-group messages (allow groups for moderation)
-            // Note: XeonBotInc.public is not synced, so we check mode in main.js instead
-            // This check is kept for backward compatibility but mainly blocks DMs
-            if (!XeonBotInc.public && !mek.key.fromMe && chatUpdate.type === 'notify') {
-                const isGroup = mek.key?.remoteJid?.endsWith('@g.us')
-                if (!isGroup) return // Block DMs in private mode, but allow group messages
-            }
-            if (mek.key.id.startsWith('BAE5') && mek.key.id.length === 16) return
-
-            // Clear message retry cache to prevent memory bloat
-            if (XeonBotInc?.msgRetryCounterCache) {
-                XeonBotInc.msgRetryCounterCache.clear()
-            }
-
-            try {
-                await handleMessages(XeonBotInc, chatUpdate, true)
-            } catch (err) {
-                console.error("Error in handleMessages:", err)
-                // Only try to send error message if we have a valid chatId
-                if (mek.key && mek.key.remoteJid) {
-                    await XeonBotInc.sendMessage(mek.key.remoteJid, {
-                        text: '❌ An error occurred while processing your message.',
-                        contextInfo: {
-                            forwardingScore: 1,
-                            isForwarded: true,
-                            forwardedNewsletterMessageInfo: {
-                                newsletterJid: '120363161513685998@newsletter',
-                                newsletterName: 'KnightBot MD',
-                                serverMessageId: -1
-                            }
-                        }
-                    }).catch(console.error);
-                }
-            }
-        } catch (err) {
-            console.error("Error in messages.upsert:", err)
-        }
-    })
-
-    // Add these event handlers for better functionality
-    XeonBotInc.decodeJid = (jid) => {
-        if (!jid) return jid
-        if (/:\d+@/gi.test(jid)) {
-            let decode = jidDecode(jid) || {}
-            return decode.user && decode.server && decode.user + '@' + decode.server || jid
-        } else return jid
-    }
-
-    XeonBotInc.ev.on('contacts.update', update => {
-        for (let contact of update) {
-            let id = XeonBotInc.decodeJid(contact.id)
-            if (store && store.contacts) store.contacts[id] = { id, name: contact.notify }
-        }
-    })
-
-    XeonBotInc.getName = (jid, withoutContact = false) => {
-        id = XeonBotInc.decodeJid(jid)
-        withoutContact = XeonBotInc.withoutContact || withoutContact
-        let v
-        if (id.endsWith("@g.us")) return new Promise(async (resolve) => {
-            v = store.contacts[id] || {}
-            if (!(v.name || v.subject)) v = XeonBotInc.groupMetadata(id) || {}
-            resolve(v.name || v.subject || PhoneNumber('+' + id.replace('@s.whatsapp.net', '')).getNumber('international'))
-        })
-        else v = id === '0@s.whatsapp.net' ? {
-            id,
-            name: 'WhatsApp'
-        } : id === XeonBotInc.decodeJid(XeonBotInc.user.id) ?
-            XeonBotInc.user :
-            (store.contacts[id] || {})
-        return (withoutContact ? '' : v.name) || v.subject || v.verifiedName || PhoneNumber('+' + jid.replace('@s.whatsapp.net', '')).getNumber('international')
-    }
-
-    XeonBotInc.public = true
-
-    XeonBotInc.serializeM = (m) => smsg(XeonBotInc, m, store)
-
-    // Handle pairing code
-    if (pairingCode && !XeonBotInc.authState.creds.registered) {
-        if (useMobile) throw new Error('Cannot use pairing code with mobile api')
-
-        let phoneNumber
-        if (!!global.phoneNumber) {
-            phoneNumber = global.phoneNumber
-        } else {
-            phoneNumber = await question(chalk.bgBlack(chalk.greenBright(`Please type your WhatsApp number 😍\nFormat: 6281376552730 (without + or spaces) : `)))
-        }
-
-        // Clean the phone number - remove any non-digit characters
-        phoneNumber = phoneNumber.replace(/[^0-9]/g, '')
-
-        // Validate the phone number using awesome-phonenumber
-        const pn = require('awesome-phonenumber');
-        if (!pn('+' + phoneNumber).isValid()) {
-            console.log(chalk.red('Invalid phone number. Please enter your full international number (e.g., 15551234567 for US, 447911123456 for UK, etc.) without + or spaces.'));
-            process.exit(1);
-        }
-
-        setTimeout(async () => {
-            try {
-                let code = await XeonBotInc.requestPairingCode(phoneNumber)
-                code = code?.match(/.{1,4}/g)?.join("-") || code
-                console.log(chalk.black(chalk.bgGreen(`Your Pairing Code : `)), chalk.black(chalk.white(code)))
-                console.log(chalk.yellow(`\nPlease enter this code in your WhatsApp app:\n1. Open WhatsApp\n2. Go to Settings > Linked Devices\n3. Tap "Link a Device"\n4. Enter the code shown above`))
-            } catch (error) {
-                console.error('Error requesting pairing code:', error)
-                console.log(chalk.red('Failed to get pairing code. Please check your phone number and try again.'))
-            }
-        }, 3000)
-    }
-
-    // Connection handling
-    XeonBotInc.ev.on('connection.update', async (s) => {
-        const { connection, lastDisconnect, qr } = s
-        
-        if (qr) {
-            console.log(chalk.yellow('📱 QR Code generated. Please scan with WhatsApp.'))
-        }
-        
-        if (connection === 'connecting') {
-            console.log(chalk.yellow('🔄 Connecting to WhatsApp...'))
-        }
-        
-        if (connection == "open") {
-            console.log(chalk.magenta(` `))
-            console.log(chalk.yellow(`🌿Connected to => ` + JSON.stringify(XeonBotInc.user, null, 2)))
-
-            try {
-                const botNumber = XeonBotInc.user.id.split(':')[0] + '@s.whatsapp.net';
-                await XeonBotInc.sendMessage(botNumber, {
-                    text: `🤖 Bot Connected Successfully!\n\n⏰ Time: ${new Date().toLocaleString()}\n✅ Status: Online and Ready!\n\n✅Make sure to join below channel`,
-                    contextInfo: {
-                        forwardingScore: 1,
-                        isForwarded: true,
-                        forwardedNewsletterMessageInfo: {
-                            newsletterJid: '120363161513685998@newsletter',
-                            newsletterName: 'KnightBot MD',
-                            serverMessageId: -1
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error('Error sending connection message:', error.message)
-            }
-
-            await delay(1999)
-            console.log(chalk.yellow(`\n\n                  ${chalk.bold.blue(`[ ${global.botname || 'KNIGHT BOT'} ]`)}\n\n`))
-            console.log(chalk.cyan(`< ================================================== >`))
-            console.log(chalk.magenta(`\n${global.themeemoji || '•'} YT CHANNEL: MR UNIQUE HACKER`))
-            console.log(chalk.magenta(`${global.themeemoji || '•'} GITHUB: mrunqiuehacker`))
-            console.log(chalk.magenta(`${global.themeemoji || '•'} WA NUMBER: ${owner}`))
-            console.log(chalk.magenta(`${global.themeemoji || '•'} CREDIT: MR UNIQUE HACKER`))
-            console.log(chalk.green(`${global.themeemoji || '•'} 🤖 Bot Connected Successfully! ✅`))
-            console.log(chalk.blue(`Bot Version: ${settings.version}`))
-        }
-        
-        if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut
-            const statusCode = lastDisconnect?.error?.output?.statusCode
-            
-            console.log(chalk.red(`Connection closed due to ${lastDisconnect?.error}, reconnecting ${shouldReconnect}`))
-            
-            if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
-                try {
-                    rmSync('./session', { recursive: true, force: true })
-                    console.log(chalk.yellow('Session folder deleted. Please re-authenticate.'))
-                } catch (error) {
-                    console.error('Error deleting session:', error)
-                }
-                console.log(chalk.red('Session logged out. Please re-authenticate.'))
-            }
-            
-            if (shouldReconnect) {
-                console.log(chalk.yellow('Reconnecting...'))
-                await delay(5000)
-                startXeonBotInc()
-            }
-        }
-    })
-
-    // Track recently-notified callers to avoid spamming messages
-    const antiCallNotified = new Set();
-
-    // Anticall handler: block callers when enabled
-    XeonBotInc.ev.on('call', async (calls) => {
-        try {
-            const { readState: readAnticallState } = require('./commands/anticall');
-            const state = readAnticallState();
-            if (!state.enabled) return;
-            for (const call of calls) {
-                const callerJid = call.from || call.peerJid || call.chatId;
-                if (!callerJid) continue;
-                try {
-                    // First: attempt to reject the call if supported
-                    try {
-                        if (typeof XeonBotInc.rejectCall === 'function' && call.id) {
-                            await XeonBotInc.rejectCall(call.id, callerJid);
-                        } else if (typeof XeonBotInc.sendCallOfferAck === 'function' && call.id) {
-                            await XeonBotInc.sendCallOfferAck(call.id, callerJid, 'reject');
-                        }
-                    } catch {}
-
-                    // Notify the caller only once within a short window
-                    if (!antiCallNotified.has(callerJid)) {
-                        antiCallNotified.add(callerJid);
-                        setTimeout(() => antiCallNotified.delete(callerJid), 60000);
-                        await XeonBotInc.sendMessage(callerJid, { text: '📵 Anticall is enabled. Your call was rejected and you will be blocked.' });
-                    }
-                } catch {}
-                // Then: block after a short delay to ensure rejection and message are processed
-                setTimeout(async () => {
-                    try { await XeonBotInc.updateBlockStatus(callerJid, 'block'); } catch {}
-                }, 800);
-            }
-        } catch (e) {
-            // ignore
-        }
-    });
-
-    XeonBotInc.ev.on('group-participants.update', async (update) => {
-        await handleGroupParticipantUpdate(XeonBotInc, update);
-    });
-
-    XeonBotInc.ev.on('messages.upsert', async (m) => {
-        if (m.messages[0].key && m.messages[0].key.remoteJid === 'status@broadcast') {
-            await handleStatus(XeonBotInc, m);
-        }
-    });
-
-    XeonBotInc.ev.on('status.update', async (status) => {
-        await handleStatus(XeonBotInc, status);
-    });
-
-    XeonBotInc.ev.on('messages.reaction', async (status) => {
-        await handleStatus(XeonBotInc, status);
-    });
-
-    return XeonBotInc
-    } catch (error) {
-        console.error('Error in startXeonBotInc:', error)
-        await delay(5000)
-        startXeonBotInc()
-    }
+        .then((response) => response.json())
+        return jsonnya
 }
 
-
-// Start the bot with error handling
-startXeonBotInc().catch(error => {
-    console.error('Fatal error:', error)
-    process.exit(1)
-})
-process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err)
-})
-
-process.on('unhandledRejection', (err) => {
-    console.error('Unhandled Rejection:', err)
-})
-
-let file = require.resolve(__filename)
-fs.watchFile(file, () => {
-    fs.unwatchFile(file)
-    console.log(chalk.redBright(`Update ${__filename}`))
-    delete require.cache[file]
-    require(file)
-}) 
+module.exports = { TelegraPh, UploadFileUgu, webp2mp4File, floNime }
 
 
-
-
-const { exec } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const https = require('https');
-const settings = require('../settings');
-const isOwnerOrSudo = require('../lib/isOwner');
-
-function run(cmd) {
-    return new Promise((resolve, reject) => {
-        exec(cmd, { windowsHide: true }, (err, stdout, stderr) => {
-            if (err) return reject(new Error((stderr || stdout || err.message || '').toString()));
-            resolve((stdout || '').toString());
-        });
-    });
-}
-
-async function hasGitRepo() {
-    const gitDir = path.join(process.cwd(), '.git');
-    if (!fs.existsSync(gitDir)) return false;
-    try {
-        await run('git --version');
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-async function updateViaGit() {
-    const oldRev = (await run('git rev-parse HEAD').catch(() => 'unknown')).trim();
-    await run('git fetch --all --prune');
-    const newRev = (await run('git rev-parse origin/main')).trim();
-    const alreadyUpToDate = oldRev === newRev;
-    const commits = alreadyUpToDate ? '' : await run(`git log --pretty=format:"%h %s (%an)" ${oldRev}..${newRev}`).catch(() => '');
-    const files = alreadyUpToDate ? '' : await run(`git diff --name-status ${oldRev} ${newRev}`).catch(() => '');
-    await run(`git reset --hard ${newRev}`);
-    await run('git clean -fd');
-    return { oldRev, newRev, alreadyUpToDate, commits, files };
-}
-
-function downloadFile(url, dest, visited = new Set()) {
-    return new Promise((resolve, reject) => {
-        try {
-            // Avoid infinite redirect loops
-            if (visited.has(url) || visited.size > 5) {
-                return reject(new Error('Too many redirects'));
-            }
-            visited.add(url);
-
-            const useHttps = url.startsWith('https://');
-            const client = useHttps ? require('https') : require('http');
-            const req = client.get(url, {
-                headers: {
-                    'User-Agent': 'KnightBot-Updater/1.0',
-                    'Accept': '*/*'
-                }
-            }, res => {
-                // Handle redirects
-                if ([301, 302, 303, 307, 308].includes(res.statusCode)) {
-                    const location = res.headers.location;
-                    if (!location) return reject(new Error(`HTTP ${res.statusCode} without Location`));
-                    const nextUrl = new URL(location, url).toString();
-                    res.resume();
-                    return downloadFile(nextUrl, dest, visited).then(resolve).catch(reject);
-                }
-
-                if (res.statusCode !== 200) {
-                    return reject(new Error(`HTTP ${res.statusCode}`));
-                }
-
-                const file = fs.createWriteStream(dest);
-                res.pipe(file);
-                file.on('finish', () => file.close(resolve));
-                file.on('error', err => {
-                    try { file.close(() => {}); } catch {}
-                    fs.unlink(dest, () => reject(err));
-                });
-            });
-            req.on('error', err => {
-                fs.unlink(dest, () => reject(err));
-            });
-        } catch (e) {
-            reject(e);
-        }
-    });
-}
-
-async function extractZip(zipPath, outDir) {
-    // Try to use platform tools; no extra npm modules required
-    if (process.platform === 'win32') {
-        const cmd = `powershell -NoProfile -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${outDir.replace(/\\/g, '/')}' -Force"`;
-        await run(cmd);
-        return;
-    }
-    // Linux/mac: try unzip, else 7z, else busybox unzip
-    try {
-        await run('command -v unzip');
-        await run(`unzip -o '${zipPath}' -d '${outDir}'`);
-        return;
-    } catch {}
-    try {
-        await run('command -v 7z');
-        await run(`7z x -y '${zipPath}' -o'${outDir}'`);
-        return;
-    } catch {}
-    try {
-        await run('busybox unzip -h');
-        await run(`busybox unzip -o '${zipPath}' -d '${outDir}'`);
-        return;
-    } catch {}
-    throw new Error("No system unzip tool found (unzip/7z/busybox). Git mode is recommended on this panel.");
-}
-
-function copyRecursive(src, dest, ignore = [], relative = '', outList = []) {
-    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
-    for (const entry of fs.readdirSync(src)) {
-        if (ignore.includes(entry)) continue;
-        const s = path.join(src, entry);
-        const d = path.join(dest, entry);
-        const stat = fs.lstatSync(s);
-        if (stat.isDirectory()) {
-            copyRecursive(s, d, ignore, path.join(relative, entry), outList);
-        } else {
-            fs.copyFileSync(s, d);
-            if (outList) outList.push(path.join(relative, entry).replace(/\\/g, '/'));
-        }
-    }
-}
-
-async function updateViaZip(sock, chatId, message, zipOverride) {
-    const zipUrl = (zipOverride || settings.updateZipUrl || process.env.UPDATE_ZIP_URL || '').trim();
-    if (!zipUrl) {
-        throw new Error('No ZIP URL configured. Set settings.updateZipUrl or UPDATE_ZIP_URL env.');
-    }
-    const tmpDir = path.join(process.cwd(), 'tmp');
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-    const zipPath = path.join(tmpDir, 'update.zip');
-    await downloadFile(zipUrl, zipPath);
-    const extractTo = path.join(tmpDir, 'update_extract');
-    if (fs.existsSync(extractTo)) fs.rmSync(extractTo, { recursive: true, force: true });
-    await extractZip(zipPath, extractTo);
-
-    // Find the top-level extracted folder (GitHub zips create REPO-branch folder)
-    const [root] = fs.readdirSync(extractTo).map(n => path.join(extractTo, n));
-    const srcRoot = fs.existsSync(root) && fs.lstatSync(root).isDirectory() ? root : extractTo;
-
-    // Copy over while preserving runtime dirs/files
-    const ignore = ['node_modules', '.git', 'session', 'tmp', 'tmp/', 'temp', 'data', 'baileys_store.json'];
-    const copied = [];
-    // Preserve ownerNumber from existing settings.js if present
-    let preservedOwner = null;
-    let preservedBotOwner = null;
-    try {
-        const currentSettings = require('../settings');
-        preservedOwner = currentSettings && currentSettings.ownerNumber ? String(currentSettings.ownerNumber) : null;
-        preservedBotOwner = currentSettings && currentSettings.botOwner ? String(currentSettings.botOwner) : null;
-    } catch {}
-    copyRecursive(srcRoot, process.cwd(), ignore, '', copied);
-    if (preservedOwner) {
-        try {
-            const settingsPath = path.join(process.cwd(), 'settings.js');
-            if (fs.existsSync(settingsPath)) {
-                let text = fs.readFileSync(settingsPath, 'utf8');
-                text = text.replace(/ownerNumber:\s*'[^']*'/, `ownerNumber: '${preservedOwner}'`);
-                if (preservedBotOwner) {
-                    text = text.replace(/botOwner:\s*'[^']*'/, `botOwner: '${preservedBotOwner}'`);
-                }
-                fs.writeFileSync(settingsPath, text);
-            }
-        } catch {}
-    }
-    // Cleanup extracted directory
-    try { fs.rmSync(extractTo, { recursive: true, force: true }); } catch {}
-    try { fs.rmSync(zipPath, { force: true }); } catch {}
-    return { copiedFiles: copied };
-}
-
-async function restartProcess(sock, chatId, message) {
-    try {
-        await sock.sendMessage(chatId, { text: '✅ Update complete! Restarting…' }, { quoted: message });
-    } catch {}
-    try {
-        // Preferred: PM2
-        await run('pm2 restart all');
-        return;
-    } catch {}
-    // Panels usually auto-restart when the process exits.
-    // Exit after a short delay to allow the above message to flush.
-    setTimeout(() => {
-        process.exit(0);
-    }, 500);
-}
-
-async function updateCommand(sock, chatId, message, zipOverride) {
-    const senderId = message.key.participant || message.key.remoteJid;
-    const isOwner = await isOwnerOrSudo(senderId, sock, chatId);
-    
-    if (!message.key.fromMe && !isOwner) {
-        await sock.sendMessage(chatId, { text: 'Only bot owner or sudo can use .update' }, { quoted: message });
-        return;
-    }
-    try {
-        // Minimal UX
-        await sock.sendMessage(chatId, { text: '🔄 Updating the bot, please wait…' }, { quoted: message });
-        if (await hasGitRepo()) {
-            // silent
-            const { oldRev, newRev, alreadyUpToDate, commits, files } = await updateViaGit();
-            // Short message only: version info
-            const summary = alreadyUpToDate ? `✅ Already up to date: ${newRev}` : `✅ Updated to ${newRev}`;
-            console.log('[update] summary generated');
-            // silent
-            await run('npm install --no-audit --no-fund');
-        } else {
-            const { copiedFiles } = await updateViaZip(sock, chatId, message, zipOverride);
-            // silent
-        }
-        try {
-            const v = require('../settings').version || '';
-            await sock.sendMessage(chatId, { text: `✅ Update done. Restarting…` }, { quoted: message });
-        } catch {
-            await sock.sendMessage(chatId, { text: '✅ Restared Successfully\n Type .ping to check latest version.' }, { quoted: message });
-        }
-        await restartProcess(sock, chatId, message);
-    } catch (err) {
-        console.error('Update failed:', err);
-        await sock.sendMessage(chatId, { text: `❌ Update failed:\n${String(err.message || err)}` }, { quoted: message });
-    }
-}
-
-module.exports = updateCommand;
