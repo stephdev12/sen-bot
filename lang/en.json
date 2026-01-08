@@ -108,7 +108,7 @@
     "ui": {
       "title": "🧠 SEN QUIZ",
       "select": "Choose a category to start!",
-      "lobby": "*SEN_QUIZ LOBBY*\n\n> *Category :* {category}\n\nType *\'join\'* to join the game!\nThe game starts in 30 seconds.",
+      "lobby": "*SEN_QUIZ LOBBY*\n\n> *Category :* {category}\n\nType 'join' to join the game!\nThe game starts in 30 seconds.",
       "joined": "✅ @{user} joined the game!",
       "starting": "🚀 *THE QUIZ STARTS!*\nGet ready...",
       "question_header": "*QUESTION {num}/{total}*\n> *Category :* {category}\n\n{question}",

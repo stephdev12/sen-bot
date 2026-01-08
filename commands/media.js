@@ -306,9 +306,6 @@ export async function deleteMediaCommand(sock, chatId, message, args) {
     }
 }
 
-// ========================================
-// 📸 TOIMG - Sticker vers Image
-// ========================================
 export async function toimgCommand(sock, chatId, message, args) {
     try {
         const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
@@ -336,9 +333,6 @@ export async function toimgCommand(sock, chatId, message, args) {
     }
 }
 
-// ========================================
-// 🎥 TOVIDEO - Sticker animé vers Vidéo
-// ========================================
 export async function tovideoCommand(sock, chatId, message, args) {
     try {
         const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
