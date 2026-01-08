@@ -4,6 +4,8 @@
  */
 
 import configs from '../configs.js';
+import response from '../lib/response.js';
+import lang from '../lib/languageManager.js';
 
 function formatTime(seconds) {
     const days = Math.floor(seconds / (24 * 60 * 60));
@@ -25,25 +27,21 @@ function formatTime(seconds) {
 async function pingCommand(sock, chatId, message, args) {
     try {
         const start = Date.now();
-        await sock.sendMessage(chatId, { text: 'Pong!' }, { quoted: message });
+        await sock.sendMessage(chatId, { text: lang.t('commands.ping.response') }, { quoted: message });
         const end = Date.now();
         const ping = Math.round((end - start) / 2);
 
         const uptimeInSeconds = process.uptime();
         const uptimeFormatted = formatTime(uptimeInSeconds);
 
-        const botInfo = `
-┏━━〔 🤖 ${configs.botName} 〕━━┓
-┃ 🚀 Ping     : ${ping} ms
-┃ ⏱️ Uptime   : ${uptimeFormatted}
-┃ 🔖 Version  : v${configs.version}
-┗━━━━━━━━━━━━━━━━━━━┛`.trim();
-
-        await sock.sendMessage(chatId, { text: botInfo }, { quoted: message });
+        // Utiliser response.ping avec l'image thumbnail
+        await response.ping(sock, chatId, message, `${ping} ms`, uptimeFormatted);
 
     } catch (error) {
         console.error('Error in ping command:', error);
-        await sock.sendMessage(chatId, { text: '❌ Failed to get bot status.' });
+        await sock.sendMessage(chatId, { 
+            text: lang.t('errors.commandFailed') 
+        });
     }
 }
 

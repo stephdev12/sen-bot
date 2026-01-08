@@ -313,11 +313,11 @@ export async function toimgCommand(sock, chatId, message, args) {
     try {
         const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
         if (!quoted?.stickerMessage) {
-            return sock.sendMessage(chatId, { text: '> Veuillez répondre à un sticker non-animé.' }, { quoted: message });
+            return sock.sendMessage(chatId, { text: lang.t('commands.toimg.noSticker') }, { quoted: message });
         }
 
         if (quoted.stickerMessage.isAnimated) {
-            return sock.sendMessage(chatId, { text: '> Utilisez .tovideo pour les stickers animés.' }, { quoted: message });
+            return sock.sendMessage(chatId, { text: lang.t('commands.toimg.animated') }, { quoted: message });
         }
 
         await sock.sendMessage(chatId, { react: { text: '🔄', key: message.key } });
@@ -328,11 +328,11 @@ export async function toimgCommand(sock, chatId, message, args) {
             buffer = Buffer.concat([buffer, chunk]);
         }
 
-        await sock.sendMessage(chatId, { image: buffer, caption: '> *TOIMG DONE*' }, { quoted: message });
+        await sock.sendMessage(chatId, { image: buffer, caption: lang.t('commands.toimg.success') }, { quoted: message });
 
     } catch (error) {
         console.error('ToImg Error:', error);
-        await sock.sendMessage(chatId, { text: '> Erreur lors de la conversion' }, { quoted: message });
+        await sock.sendMessage(chatId, { text: lang.t('commands.toimg.error') }, { quoted: message });
     }
 }
 
@@ -343,7 +343,7 @@ export async function tovideoCommand(sock, chatId, message, args) {
     try {
         const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
         if (!quoted?.stickerMessage?.isAnimated) {
-            return sock.sendMessage(chatId, { text: '> Veuillez répondre à un sticker animé.' }, { quoted: message });
+            return sock.sendMessage(chatId, { text: lang.t('commands.tovideo.noSticker') }, { quoted: message });
         }
 
         await sock.sendMessage(chatId, { react: { text: '🔄', key: message.key } });
@@ -361,7 +361,7 @@ export async function tovideoCommand(sock, chatId, message, args) {
         // Convert
         try {
             const videoUrl = await webp2mp4File(tempPath);
-            await sock.sendMessage(chatId, { video: { url: videoUrl }, caption: '> *TOVIDEO DONE*' }, { quoted: message });
+            await sock.sendMessage(chatId, { video: { url: videoUrl }, caption: lang.t('commands.tovideo.success') }, { quoted: message });
         } catch (e) {
             throw e;
         } finally {
@@ -371,7 +371,7 @@ export async function tovideoCommand(sock, chatId, message, args) {
 
     } catch (error) {
         console.error('ToVideo Error:', error);
-        await sock.sendMessage(chatId, { text: '> Erreur lors de la conversion' }, { quoted: message });
+        await sock.sendMessage(chatId, { text: lang.t('commands.tovideo.error') }, { quoted: message });
     }
 }
 
